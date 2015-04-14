@@ -1,0 +1,57 @@
+#!/usr/bin/python
+
+from xml.sax.handler import ContentHandler
+from xml.sax import make_parser
+import sys
+import string
+
+def normalize_whitespace(text):
+    "Remove redundant whitespace from a string"
+    return string.join(string.split(text), ' ')
+
+class CounterHandler(ContentHandler):
+
+    def __init__ (self):
+        self.inContent = 0
+        self.theContent = ""
+        self.isANew = 0  # variable que indica si el titular es de una noticia
+        self.response = "\n<p><h2>Titulares:</h2></p>\n"
+
+    def startElement (self, name, attrs):
+        if name == 'item':
+            self.link = normalize_whitespace(attrs.get('rdf:about'))
+            self.isANew = 1
+        elif name == 'title':
+            if self.isANew:
+                self.inContent = 1
+            
+    def endElement (self, name):
+        if self.inContent:
+            self.theContent = normalize_whitespace(self.theContent)
+        if name == 'title':
+            if self.isANew:
+                self.response += "<p><a href='" + self.link + "'>" + \
+                                self.theContent + "</a></p><br>\n" 
+        if self.inContent:
+            self.inContent = 0
+            self.isANew = 0
+            self.theContent = ""
+        
+    def characters (self, chars):
+        if self.inContent:
+            self.theContent = self.theContent + chars
+            
+# --- Main prog
+def parse_bp():
+
+    Parser = make_parser()
+    Handler = CounterHandler()
+    Parser.setContentHandler(Handler)
+
+    # Ready, set, go!
+
+    xmlURL = "http://barrapunto.com/index.rss"
+    Parser.parse(xmlURL)
+    return Handler.response
+
+
